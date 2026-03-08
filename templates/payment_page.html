@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}Payment{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb small">
+                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                    <li class="breadcrumb-item active">Payment</li>
+                </ol>
+            </nav>
+
+            <!-- Booking Summary -->
+            <div class="card border-0 shadow-sm rounded-3 mb-3">
+                <div class="card-header fw-bold py-2 small" style="background:#f0f4f8">
+                    <i class="bi bi-ticket-perforated me-2 text-primary-cuu"></i>Booking Summary
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-6 text-muted small">Seats Booked</div>
+                        <div class="col-6 fw-semibold text-end">{{ seats }}</div>
+                        <div class="col-6 text-muted small">Passengers</div>
+                        <div class="col-6 fw-semibold text-end">
+                            {% for p in passengers %}{{ p.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        </div>
+                    </div>
+                    <hr class="my-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">Total Amount</span>
+                        <span class="fs-4 fw-bold text-primary-cuu">UGX {{ total_fare|floatformat:0 }}</span>
+                    </div>
+                    <div class="small text-muted text-end mt-1">Amount is calculated server-side and cannot be altered</div>
+                </div>
+            </div>
+
+            <!-- Payment Form -->
+            <div class="payment-card">
+                <h5 class="fw-bold text-primary-cuu mb-4"><i class="bi bi-credit-card me-2"></i>Choose Payment Method</h5>
+
+                <form method="POST" action="{% url 'process_payment' %}" id="paymentForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="amount" value="{{ total_fare }}">
+
+                    <div id="paymentMethods">
+                        {% for val, label, icon in payment_methods|default:"" %}
+                        <div class="payment-method-option" onclick="selectMethod('{{ val }}', this)">
+                            <input type="radio" name="payment_method" value="{{ val }}" id="pm_{{ val }}">
+                            <span class="payment-method-icon">{{ icon }}</span>
+                            <label for="pm_{{ val }}" class="fw-semibold mb-0 cursor-pointer flex-grow-1">{{ label }}</label>
+                        </div>
+                        {% empty %}
+                        <div class="payment-method-option" onclick="selectMethod('mobile_money', this)">
+                            <input type="radio" name="payment_method" value="mobile_money" id="pm_mm">
+                            <span class="payment-method-icon">📱</span>
+                            <label for="pm_mm" class="fw-semibold mb-0 flex-grow-1">Mobile Money (MTN/Airtel)</label>
+                        </div>
+                        <div class="payment-method-option" onclick="selectMethod('credit_card', this)">
+                            <input type="radio" name="payment_method" value="credit_card" id="pm_cc">
+                            <span class="payment-method-icon">💳</span>
+                            <label for="pm_cc" class="fw-semibold mb-0 flex-grow-1">Credit / Debit Card</label>
+                        </div>
+                        <div class="payment-method-option" onclick="selectMethod('paypal', this)">
+                            <input type="radio" name="payment_method" value="paypal" id="pm_pp">
+                            <span class="payment-method-icon">🅿</span>
+                            <label for="pm_pp" class="fw-semibold mb-0 flex-grow-1">PayPal</label>
+                        </div>
+                        <div class="payment-method-option" onclick="selectMethod('cash', this)">
+                            <input type="radio" name="payment_method" value="cash" id="pm_cash">
+                            <span class="payment-method-icon">💵</span>
+                            <label for="pm_cash" class="fw-semibold mb-0 flex-grow-1">Cash on Board</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="alert alert-info small mt-3 mb-3 py-2">
+                        <i class="bi bi-shield-lock me-1"></i>
+                        This is a <strong>simulated payment</strong>. No real money is charged. Your booking will be confirmed immediately.
+                    </div>
+
+                    <button type="submit" class="btn-primary-cuu w-100 py-3 fs-5" id="payBtn" disabled>
+                        <span id="paySpinner" class="spinner-border spinner-border-sm me-2 d-none"></span>
+                        <i class="bi bi-lock-fill me-2" id="payIcon"></i>Pay UGX {{ total_fare|floatformat:0 }}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function selectMethod(val, el) {
+    document.querySelectorAll('.payment-method-option').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+    el.querySelector('input[type="radio"]').checked = true;
+    document.getElementById('payBtn').disabled = false;
+}
+
+document.getElementById('paymentForm').addEventListener('submit', function () {
+    document.getElementById('payBtn').disabled = true;
+    document.getElementById('paySpinner').classList.remove('d-none');
+    document.getElementById('payIcon').classList.add('d-none');
+});
+</script>
+{% endblock %}

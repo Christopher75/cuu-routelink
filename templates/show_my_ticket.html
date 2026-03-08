@@ -1,0 +1,341 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Tickets{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold text-primary-cuu mb-0">
+            <i class="bi bi-ticket-perforated me-2"></i>My Tickets
+        </h3>
+        <button class="btn btn-sm btn-outline-secondary d-print-none" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i>Print All
+        </button>
+    </div>
+
+    <!-- Filters -->
+    <form method="GET" class="row g-2 mb-4 d-print-none">
+        <div class="col-auto">
+            <div class="btn-group" role="group">
+                <a href="?status=all{% if search_q %}&q={{ search_q }}{% endif %}"
+                   class="btn btn-sm {% if status_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">All</a>
+                <a href="?status=upcoming{% if search_q %}&q={{ search_q }}{% endif %}"
+                   class="btn btn-sm {% if status_filter == 'upcoming' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Upcoming</a>
+                <a href="?status=completed{% if search_q %}&q={{ search_q }}{% endif %}"
+                   class="btn btn-sm {% if status_filter == 'completed' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Completed</a>
+                <a href="?status=cancelled{% if search_q %}&q={{ search_q }}{% endif %}"
+                   class="btn btn-sm {% if status_filter == 'cancelled' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Cancelled</a>
+            </div>
+        </div>
+        <div class="col-auto ms-auto">
+            <div class="input-group input-group-sm">
+                <input type="text" name="q" class="form-control" placeholder="Search route, bus..." value="{{ search_q }}">
+                <input type="hidden" name="status" value="{{ status_filter }}">
+                <button class="btn btn-outline-primary" type="submit"><i class="bi bi-search"></i></button>
+            </div>
+        </div>
+    </form>
+
+    {% if page_obj.object_list %}
+        {% for booking in page_obj %}
+        <div class="ticket-card {% if booking.is_cancelled %}opacity-75{% endif %}" id="ticket-{{ booking.booking_id }}">
+            <!-- Header row -->
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                <div>
+                    <div class="ticket-route">
+                        {{ booking.bus.source.place_name }}
+                        <i class="bi bi-arrow-right mx-1" style="color:var(--secondary)"></i>
+                        {{ booking.bus.destination.place_name }}
+                    </div>
+                    <div class="ticket-id">Booking: {{ booking.booking_id }}</div>
+                </div>
+                <div class="d-flex gap-2 align-items-center flex-wrap">
+                    {% if booking.is_cancelled %}
+                        <span class="status-badge cancelled">Cancelled</span>
+                    {% elif booking.arrival_time < current_time %}
+                        <span class="status-badge completed">Completed</span>
+                    {% else %}
+                        <span class="status-badge upcoming">Upcoming</span>
+                    {% endif %}
+                    <button class="btn btn-sm btn-outline-secondary d-print-none" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#qr-{{ booking.booking_id }}">
+                        <i class="bi bi-qr-code"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary d-print-none"
+                            onclick="printTicket('ticket-{{ booking.booking_id }}')" title="Print this ticket">
+                        <i class="bi bi-printer"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Departure Countdown (upcoming only) -->
+            {% if not booking.is_cancelled and booking.starting_time > current_time %}
+            <div class="countdown-banner mb-3 d-print-none">
+                <i class="bi bi-clock me-1"></i>
+                Departs in: <strong class="countdown-timer" data-departure="{{ booking.starting_time|date:'c' }}">Calculating...</strong>
+            </div>
+            {% endif %}
+
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <div class="row g-2 small">
+                        <div class="col-6">
+                            <span class="text-muted">Bus:</span>
+                            <strong> {{ booking.bus.bus_name }} ({{ booking.bus.bus_type }})</strong>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted">Seats:</span> <strong>{{ booking.seats }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted">Departure:</span>
+                            <strong>{{ booking.starting_time|date:"d M Y H:i" }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted">Arrival:</span>
+                            <strong>{{ booking.arrival_time|date:"d M Y H:i" }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted">Operator:</span> {{ booking.bus.bus_operator.operator_name }}
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted">Booked on:</span> {{ booking.booking_date|date:"d M Y" }}
+                        </div>
+                    </div>
+
+                    <!-- Passengers -->
+                    {% if booking.passenger_set.all %}
+                    <div class="mt-2">
+                        <div class="small text-muted mb-1">Passengers:</div>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for p in booking.passenger_set.all %}
+                            <span class="badge bg-light text-dark border small">
+                                {{ p.name }} ({{ p.get_gender_display }}, {{ p.age }}{% if p.seat_number %} · Seat {{ p.seat_number }}{% endif %})
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- QR Code -->
+                <div class="col-md-4">
+                    <div class="collapse" id="qr-{{ booking.booking_id }}">
+                        <div class="text-center p-2 rounded-3" style="background:#f0f4f8">
+                            <img src="{% url 'ticket_qr' booking.booking_id %}"
+                                 alt="QR Code" class="qr-code-img" width="140" height="140">
+                            <div class="small text-muted mt-1">Scan for ticket verification</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rating Section (all non-cancelled bookings) -->
+            {% if not booking.is_cancelled %}
+            <div class="mt-3 pt-3 border-top d-print-none">
+                {% if booking.rating_value %}
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="small">
+                        <strong>Your Rating:</strong>
+                        <span class="text-warning ms-1">
+                            {% for i in "12345" %}{% if forloop.counter <= booking.rating_value %}★{% else %}☆{% endif %}{% endfor %}
+                        </span>
+                        <span class="text-muted ms-1">{{ booking.rating_value }}/5</span>
+                        {% if booking.review_text %}<span class="text-muted ms-2">"{{ booking.review_text }}"</span>{% endif %}
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#review-form-{{ booking.booking_id }}">
+                        <i class="bi bi-pencil me-1"></i>Edit Review
+                    </button>
+                </div>
+                <div class="collapse mt-2" id="review-form-{{ booking.booking_id }}">
+                    <form class="rating-form" action="{% url 'add_rating' booking.booking_id %}" method="POST">
+                        {% csrf_token %}
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <div class="js-star-widget" data-current="{{ booking.rating_value }}">
+                                {% for value, label in rating_choices %}
+                                <span class="js-star {% if forloop.counter <= booking.rating_value %}active{% endif %}"
+                                      data-value="{{ value }}" title="{{ label }}">★</span>
+                                {% endfor %}
+                                <input type="hidden" name="rating_value" value="{{ booking.rating_value }}" required>
+                            </div>
+                            <input type="text" name="review" class="form-control form-control-sm flex-grow-1"
+                                   placeholder="Optional review..." value="{{ booking.review_text|default:'' }}" style="max-width:260px">
+                            <button type="submit" class="btn btn-sm btn-success">
+                                <i class="bi bi-check me-1"></i>Update
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                {% else %}
+                <div>
+                    <a class="small text-primary-cuu fw-semibold" data-bs-toggle="collapse"
+                       href="#review-form-{{ booking.booking_id }}" role="button">
+                        <i class="bi bi-star me-1"></i>Leave a Review (Optional)
+                    </a>
+                    <div class="collapse mt-2" id="review-form-{{ booking.booking_id }}">
+                        <form class="rating-form" action="{% url 'add_rating' booking.booking_id %}" method="POST">
+                            {% csrf_token %}
+                            <div class="d-flex align-items-center gap-3 flex-wrap">
+                                <div class="js-star-widget" data-current="0">
+                                    {% for value, label in rating_choices %}
+                                    <span class="js-star" data-value="{{ value }}" title="{{ label }}">★</span>
+                                    {% endfor %}
+                                    <input type="hidden" name="rating_value" value="" required>
+                                </div>
+                                <input type="text" name="review" class="form-control form-control-sm flex-grow-1"
+                                       placeholder="Optional review..." style="max-width:260px">
+                                <button type="submit" class="btn btn-sm btn-success">
+                                    <i class="bi bi-check me-1"></i>Submit
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Cancel Button -->
+            {% if not booking.is_cancelled and booking.starting_time > current_time %}
+            <div class="mt-3 pt-3 border-top d-print-none">
+                <form action="{% url 'cancel_booking' booking.booking_id %}" method="POST"
+                      onsubmit="return confirm('Cancel this booking? This cannot be undone.')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-x-circle me-1"></i>Cancel Booking
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Ticket pages" class="d-print-none mt-3">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?status={{ status_filter }}&q={{ search_q }}&page={{ page_obj.previous_page_number }}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?status={{ status_filter }}&q={{ search_q }}&page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?status={{ status_filter }}&q={{ search_q }}&page={{ page_obj.next_page_number }}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+    {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-ticket-perforated text-muted" style="font-size:4rem"></i>
+            <h5 class="mt-3">No bookings found</h5>
+            <p class="text-muted">You have no {{ status_filter|default:"" }} bookings yet.</p>
+            <a href="{% url 'home' %}" class="btn-primary-cuu px-4 py-2">Book a Bus</a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+/* JS-driven star rating */
+.js-star-widget { display: inline-flex; gap: 2px; font-size: 1.8rem; cursor: pointer; }
+.js-star { color: #ccc; transition: color 0.1s; user-select: none; line-height: 1; }
+.js-star.active, .js-star.hover { color: #f0c040; }
+
+/* Countdown banner */
+.countdown-banner {
+    background: rgba(26,60,94,0.06);
+    border-left: 3px solid var(--primary);
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: var(--primary);
+}
+</style>
+
+<script>
+// JS-driven star rating
+document.querySelectorAll('.js-star-widget').forEach(function(widget) {
+    const stars = widget.querySelectorAll('.js-star');
+    const input = widget.querySelector('input[type="hidden"]');
+    let currentVal = parseInt(widget.dataset.current) || 0;
+
+    stars.forEach(function(star, idx) {
+        star.addEventListener('mouseenter', function() {
+            stars.forEach((s, i) => s.classList.toggle('hover', i <= idx));
+        });
+        star.addEventListener('mouseleave', function() {
+            stars.forEach(s => s.classList.remove('hover'));
+        });
+        star.addEventListener('click', function() {
+            currentVal = parseInt(star.dataset.value);
+            input.value = currentVal;
+            stars.forEach((s, i) => s.classList.toggle('active', i < currentVal));
+        });
+    });
+});
+
+// Countdown timers
+function startCountdowns() {
+    document.querySelectorAll('.countdown-timer').forEach(function(el) {
+        const depTime = new Date(el.dataset.departure);
+        function update() {
+            const diff = depTime - new Date();
+            if (diff <= 0) { el.textContent = 'Departed'; return; }
+            const d = Math.floor(diff / 86400000);
+            const h = Math.floor((diff % 86400000) / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            const s = Math.floor((diff % 60000) / 1000);
+            let parts = [];
+            if (d > 0) parts.push(d + 'd');
+            if (h > 0 || d > 0) parts.push(h + 'h');
+            if (m > 0 || h > 0 || d > 0) parts.push(m + 'm');
+            parts.push(s + 's');
+            el.textContent = parts.join(' ');
+        }
+        update();
+        setInterval(update, 1000);
+    });
+}
+
+// Print single ticket
+function printTicket(ticketId) {
+    const el = document.getElementById(ticketId);
+    if (!el) return;
+    const win = window.open('', '_blank');
+    win.document.write(
+        '<!DOCTYPE html><html><head><title>CUU RouteLink Ticket</title>' +
+        '<link rel="stylesheet" href="/static/css/main.css">' +
+        '<style>body{padding:2rem;background:white;} .d-print-none{display:none!important;} .collapse{display:block!important;}</style>' +
+        '</head><body>' + el.outerHTML + '</body></html>'
+    );
+    win.document.close();
+    win.print();
+}
+
+document.addEventListener('DOMContentLoaded', startCountdowns);
+</script>
+{% endblock %}

@@ -1,0 +1,366 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ bus.bus_name }} — Book Seats{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+            <li class="breadcrumb-item active">{{ bus.bus_name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <!-- Bus Info -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+                <div class="card-header py-3" style="background:var(--primary);color:white">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h4 class="mb-1 fw-bold">{{ bus.bus_name }}</h4>
+                            <span class="badge bg-warning text-dark">{{ bus.bus_type }}</span>
+                            <span class="badge ms-1" style="background:rgba(255,255,255,0.2)">{{ bus.status }}</span>
+                        </div>
+                        {% if average_rating %}
+                        <div class="text-end">
+                            <div class="text-warning fw-bold fs-5">★ {{ average_rating }}</div>
+                            <div class="small opacity-75">avg rating</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-5 text-center">
+                            <div class="text-muted small">FROM</div>
+                            <div class="fw-bold fs-5">{{ bus.source.place_name }}</div>
+                            <div class="text-muted small">{{ bus.starting_time|date:"D, d M Y" }}</div>
+                            <div class="fw-bold text-primary-cuu">{{ bus.starting_time|date:"H:i" }}</div>
+                        </div>
+                        <div class="col-2 text-center d-flex align-items-center justify-content-center">
+                            <div>
+                                <div class="text-muted small mb-1">→</div>
+                                <div class="vr" style="height:20px;margin:0 auto"></div>
+                                {% if duration_display %}
+                                <div class="text-muted mt-1" style="font-size:0.7rem;white-space:nowrap">{{ duration_display }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-5 text-center">
+                            <div class="text-muted small">TO</div>
+                            <div class="fw-bold fs-5">{{ bus.destination.place_name }}</div>
+                            <div class="text-muted small">{{ bus.arrival_time|date:"D, d M Y" }}</div>
+                            <div class="fw-bold text-primary-cuu">{{ bus.arrival_time|date:"H:i" }}</div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row g-2 text-center">
+                        <div class="col-4">
+                            <div class="text-muted small">Operator</div>
+                            <div class="fw-semibold">{{ bus.bus_operator.operator_name }}</div>
+                            <div class="small text-muted">{{ bus.bus_operator.operator_contact }}</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-muted small">Fare per seat</div>
+                            <div class="fw-bold fs-5 text-primary-cuu">UGX {{ bus.fare }}</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-muted small">Available</div>
+                            <div class="fw-bold fs-5 {% if available_seats == 0 %}text-danger{% elif available_seats <= 5 %}text-warning{% else %}text-success{% endif %}">
+                                {{ available_seats }} seats
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 p-2 rounded-2 small" style="background:#f0f4f8">
+                        <i class="bi bi-info-circle me-1 text-primary-cuu"></i>
+                        <strong>Cancellation Policy:</strong> {{ bus.cancel_policy }}
+                    </div>
+
+                    {% if amenities %}
+                    <div class="mt-3">
+                        <div class="text-muted small mb-1 fw-semibold">Amenities</div>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for amenity in amenities %}
+                            <span class="amenity-badge"><i class="bi bi-check-circle me-1"></i>{{ amenity }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Route Map -->
+            {% if bus.source.latitude and bus.destination.latitude %}
+            <div class="card border-0 shadow-sm rounded-3 mt-4">
+                <div class="card-header fw-bold py-2 small" style="background:#f0f4f8">
+                    <i class="bi bi-geo-alt me-2 text-danger"></i>Route Map
+                </div>
+                <div class="card-body p-0">
+                    <div id="route-map"></div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Seat Selection -->
+        <div class="col-lg-5">
+            {% if available_seats > 0 %}
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header py-3 fw-bold" style="background:#f0f4f8">
+                    <i class="bi bi-grid me-2 text-primary-cuu"></i>Select Your Seats
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted mb-3">Click on a seat to select it. Green = selected, Red = booked.</p>
+
+                    <div class="seat-grid mb-2" id="seatGrid">
+                        <!-- Filled by JS -->
+                    </div>
+
+                    <div class="seat-legend">
+                        <div class="seat-legend-item"><div class="legend-dot available"></div><span>Available</span></div>
+                        <div class="seat-legend-item"><div class="legend-dot selected"></div><span>Selected</span></div>
+                        <div class="seat-legend-item"><div class="legend-dot booked"></div><span>Booked</span></div>
+                    </div>
+
+                    <div class="mt-3 p-2 rounded-2 small" style="background:#e8f4fd">
+                        Selected: <strong id="selectedSeatNumbers">None</strong>
+                        (<strong id="selectedCount">0</strong> seat(s))
+                        <br>Total fare: <strong id="totalFare">UGX 0</strong>
+                    </div>
+
+                    <button type="button" class="btn-primary-cuu w-100 mt-3 py-2" id="proceedBtn" disabled onclick="showPassengerModal()">
+                        <i class="bi bi-person-fill me-2"></i>Enter Passenger Details
+                    </button>
+                </div>
+            </div>
+            {% else %}
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-bus-front text-danger" style="font-size:3rem"></i>
+                    <h5 class="mt-3 fw-bold">Fully Booked</h5>
+                    <p class="text-muted">All seats on this bus are taken. Please check other buses.</p>
+                    <a href="{% url 'home' %}" class="btn-primary-cuu px-4 py-2">Search Other Buses</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Reviews Section -->
+<div class="card border-0 shadow-sm rounded-3 mt-4">
+    <div class="card-header fw-bold py-3 small" style="background:#f0f4f8">
+        <i class="bi bi-star me-2 text-warning"></i>Passenger Reviews
+        {% if average_rating %}<span class="badge bg-warning text-dark ms-2">★ {{ average_rating }}</span>{% endif %}
+    </div>
+    <div class="card-body">
+        {% if reviews %}
+        {% for review in reviews %}
+        <div class="{% if not forloop.last %}border-bottom pb-3 mb-3{% endif %}">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="text-warning fs-5">
+                        {% for i in "12345" %}{% if forloop.counter <= review.rating_value %}★{% else %}☆{% endif %}{% endfor %}
+                    </span>
+                    <strong class="ms-2">{{ review.user.first_name|default:review.user.email }}</strong>
+                    <span class="text-muted small ms-2">{{ review.created_at|date:"d M Y" }}</span>
+                </div>
+                <span class="badge bg-warning text-dark">{{ review.rating_value }}/5</span>
+            </div>
+            {% if review.review %}
+            <p class="mt-1 mb-0 text-muted small">"{{ review.review }}"</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="text-center py-4 text-muted">
+            <i class="bi bi-star fs-2"></i>
+            <p class="mt-2 mb-0">No reviews yet — be the first!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Passenger Details Modal -->
+<div class="modal fade" id="passengerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background:var(--primary);color:white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-people me-2"></i>Passenger Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="bookingForm" method="POST" action="{% url 'book_bus' bus.bus_id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="seats" id="hiddenSeats">
+                    <div id="passengerFields"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn-amber px-4 py-2" onclick="submitBooking()">
+                    <i class="bi bi-arrow-right-circle me-2"></i>Proceed to Payment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+{% if bus.source.latitude and bus.destination.latitude %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+    const srcLat = {{ bus.source.latitude }};
+    const srcLng = {{ bus.source.longitude }};
+    const dstLat = {{ bus.destination.latitude }};
+    const dstLng = {{ bus.destination.longitude }};
+    const midLat = (srcLat + dstLat) / 2;
+    const midLng = (srcLng + dstLng) / 2;
+
+    const map = L.map('route-map').setView([midLat, midLng], 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    const blueIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+        iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34],
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+        shadowSize: [41, 41],
+    });
+    const redIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+        iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34],
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+        shadowSize: [41, 41],
+    });
+
+    L.marker([srcLat, srcLng], {icon: blueIcon})
+        .addTo(map)
+        .bindPopup('<b>{{ bus.source.place_name }}</b><br>Departure');
+    L.marker([dstLat, dstLng], {icon: redIcon})
+        .addTo(map)
+        .bindPopup('<b>{{ bus.destination.place_name }}</b><br>Destination');
+    L.polyline([[srcLat, srcLng], [dstLat, dstLng]], {color: '#1A3C5E', weight: 3, dashArray: '8,6'}).addTo(map);
+})();
+</script>
+{% endif %}
+
+<script>
+const TOTAL_SEATS = {{ bus.seats }};
+const FARE = {{ bus.fare }};
+let selectedSeats = [];
+let bookedSeats = [];
+
+// Fetch booked seats then render grid
+fetch('{% url "bus_seats_api" bus.bus_id %}')
+    .then(r => r.json())
+    .then(data => {
+        bookedSeats = data.booked_seats || [];
+        renderSeatGrid();
+    })
+    .catch(() => renderSeatGrid());
+
+function renderSeatGrid() {
+    const grid = document.getElementById('seatGrid');
+    grid.innerHTML = '';
+    for (let i = 1; i <= TOTAL_SEATS; i++) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = i;
+        btn.title = 'Seat ' + i;
+        if (bookedSeats.includes(i)) {
+            btn.className = 'seat-btn booked';
+            btn.disabled = true;
+        } else {
+            btn.className = 'seat-btn available';
+            btn.onclick = () => toggleSeat(i, btn);
+        }
+        grid.appendChild(btn);
+    }
+}
+
+function toggleSeat(num, btn) {
+    const idx = selectedSeats.indexOf(num);
+    if (idx >= 0) {
+        selectedSeats.splice(idx, 1);
+        btn.className = 'seat-btn available';
+    } else {
+        selectedSeats.push(num);
+        btn.className = 'seat-btn selected';
+    }
+    selectedSeats.sort((a, b) => a - b);
+    updateSeatSummary();
+}
+
+function updateSeatSummary() {
+    const count = selectedSeats.length;
+    document.getElementById('selectedCount').textContent = count;
+    document.getElementById('selectedSeatNumbers').textContent = count ? selectedSeats.join(', ') : 'None';
+    document.getElementById('totalFare').textContent = 'UGX ' + (count * FARE).toLocaleString();
+    document.getElementById('proceedBtn').disabled = count === 0;
+}
+
+function showPassengerModal() {
+    const count = selectedSeats.length;
+    if (!count) return;
+    document.getElementById('hiddenSeats').value = count;
+    const container = document.getElementById('passengerFields');
+    container.innerHTML = '';
+    selectedSeats.forEach((seatNum, idx) => {
+        const i = idx + 1;
+        container.innerHTML += `
+        <div class="border rounded-3 p-3 mb-3">
+            <h6 class="fw-bold text-primary-cuu mb-3"><i class="bi bi-person me-2"></i>Passenger ${i} — Seat ${seatNum}</h6>
+            <input type="hidden" name="passenger_seat_${i}" value="${seatNum}">
+            <div class="row g-2">
+                <div class="col-md-5">
+                    <label class="form-label small fw-semibold">Full Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="passenger_name_${i}" required placeholder="Enter name">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Age <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control" name="passenger_age_${i}" min="1" max="120" required placeholder="Age">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Gender <span class="text-danger">*</span></label>
+                    <select class="form-select" name="passenger_gender_${i}" required>
+                        <option value="M">Male</option>
+                        <option value="F">Female</option>
+                        <option value="O">Other</option>
+                    </select>
+                </div>
+            </div>
+        </div>`;
+    });
+    new bootstrap.Modal(document.getElementById('passengerModal')).show();
+}
+
+function submitBooking() {
+    const form = document.getElementById('bookingForm');
+    // Validate all required fields
+    const inputs = form.querySelectorAll('[required]');
+    for (let inp of inputs) {
+        if (!inp.value.trim()) {
+            inp.focus();
+            inp.classList.add('is-invalid');
+            return;
+        }
+        inp.classList.remove('is-invalid');
+    }
+    form.submit();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Contact Us{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row g-4 justify-content-center">
+        <div class="col-md-7 col-lg-6">
+            <h2 class="fw-bold text-primary-cuu mb-2">Contact Us</h2>
+            <p class="text-muted mb-4">Have a question or feedback? Fill in the form below and we'll get back to you.</p>
+
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body p-4">
+                    <form method="POST" action="{% url 'contact_us' %}">
+                        {% csrf_token %}
+                        {% for field in form %}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">{{ field.label }}</label>
+                            {{ field }}
+                            {% for error in field.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                        <button type="submit" class="btn-primary-cuu px-4 py-2 w-100">
+                            <i class="bi bi-send me-2"></i>Send Message
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <h5 class="fw-bold text-primary-cuu mb-3">Get in Touch</h5>
+            <div class="d-flex align-items-start gap-3 mb-3">
+                <i class="bi bi-envelope-fill text-primary-cuu fs-5 mt-1"></i>
+                <div>
+                    <div class="fw-semibold small">Email</div>
+                    <div class="text-muted small">admin@cuuroute.ug</div>
+                </div>
+            </div>
+            <div class="d-flex align-items-start gap-3 mb-3">
+                <i class="bi bi-geo-alt-fill text-danger fs-5 mt-1"></i>
+                <div>
+                    <div class="fw-semibold small">Address</div>
+                    <div class="text-muted small">Cavendish University Uganda<br>Plot 37/39, Clement Hill Road<br>Kampala, Uganda</div>
+                </div>
+            </div>
+            <div class="d-flex align-items-start gap-3 mb-3">
+                <i class="bi bi-clock-fill text-success fs-5 mt-1"></i>
+                <div>
+                    <div class="fw-semibold small">Support Hours</div>
+                    <div class="text-muted small">Mon–Fri: 8:00 AM – 6:00 PM EAT</div>
+                </div>
+            </div>
+
+            <div class="mt-4 p-3 rounded-3 small" style="background:#f0f4f8">
+                <strong class="text-primary-cuu">CUU RouteLink</strong><br>
+                Final Year Project — 2025<br>
+                Developed by Umar Mustapha Umar<br>
+                Student ID: 130-782
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

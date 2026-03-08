@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}About CUU RouteLink{% endblock %}
+
+{% block content %}
+
+<!-- Hero Banner -->
+<div style="background:linear-gradient(135deg,var(--primary) 0%,#2a5f8f 100%);color:white;padding:4rem 0 3rem">
+    <div class="container text-center">
+        <img src="{% static 'images/cuu-logo.jpg' %}" alt="CUU Logo" class="rounded-3 shadow mb-3" style="height:80px">
+        <h1 class="fw-bold mb-2">About CUU RouteLink</h1>
+        <p class="lead opacity-85 mb-4">Uganda's Smart Bus Transit Booking Platform — Built for the Future of Public Transport</p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <a href="{% url 'register' %}" class="btn btn-warning fw-bold px-4">Get Started Free</a>
+            <a href="{% url 'contact_us' %}" class="btn btn-outline-light px-4">Contact Us</a>
+        </div>
+    </div>
+</div>
+
+<div class="container my-5">
+
+    <!-- Mission Statement -->
+    <div class="row justify-content-center mb-5">
+        <div class="col-lg-8 text-center">
+            <h2 class="fw-bold text-primary-cuu mb-3">Our Mission</h2>
+            <p class="lead text-muted">
+                CUU RouteLink was built to solve a real problem — the lack of a reliable, digital bus booking
+                system in Uganda. Travellers can now search, compare, book, and receive verified digital tickets
+                in minutes, without queuing at a bus park.
+            </p>
+        </div>
+    </div>
+
+    <!-- System Features -->
+    <div class="mb-5">
+        <h3 class="fw-bold text-primary-cuu mb-4 text-center">What the System Can Do</h3>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-3 h-100 p-3">
+                    <i class="bi bi-shield-check fs-2 text-primary-cuu mb-2"></i>
+                    <h6 class="fw-bold">Secure Authentication</h6>
+                    <p class="small text-muted mb-0">Email-based login with PBKDF2 password hashing, session management, and self-service password reset via email.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-3 h-100 p-3">
+                    <i class="bi bi-grid-3x3-gap fs-2 text-primary-cuu mb-2"></i>
+                    <h6 class="fw-bold">Visual Seat Selection</h6>
+                    <p class="small text-muted mb-0">Interactive seat grid showing live availability. Passengers choose exactly where they sit before paying.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-3 h-100 p-3">
+                    <i class="bi bi-qr-code fs-2 text-primary-cuu mb-2"></i>
+                    <h6 class="fw-bold">QR Code Tickets</h6>
+                    <p class="small text-muted mb-0">Every confirmed booking generates a unique QR code ticket with all passenger and journey details for easy boarding verification.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-3 h-100 p-3">
+                    <i class="bi bi-geo-alt fs-2 text-primary-cuu mb-2"></i>
+                    <h6 class="fw-bold">Interactive Route Maps</h6>
+                    <p class="small text-muted mb-0">OpenStreetMap-powered route visualisation showing departure and arrival locations across Uganda's major cities.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-3 h-100 p-3">
+                    <i class="bi bi-star fs-2 text-primary-cuu mb-2"></i>
+                    <h6 class="fw-bold">Ratings & Reviews</h6>
+                    <p class="small text-muted mb-0">Passengers can rate and review trips after travel, giving future travellers real social proof to choose the best service.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-3 h-100 p-3">
+                    <i class="bi bi-bar-chart fs-2 text-primary-cuu mb-2"></i>
+                    <h6 class="fw-bold">Admin Analytics</h6>
+                    <p class="small text-muted mb-0">Real-time dashboard with revenue charts, occupancy rates, cancellation stats, top routes, and recent reviews — all in one place.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-3 h-100 p-3">
+                    <i class="bi bi-envelope-check fs-2 text-primary-cuu mb-2"></i>
+                    <h6 class="fw-bold">Email Notifications</h6>
+                    <p class="small text-muted mb-0">Automatic booking confirmation and cancellation emails sent to passengers with full trip details and booking reference.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-3 h-100 p-3">
+                    <i class="bi bi-clock-history fs-2 text-primary-cuu mb-2"></i>
+                    <h6 class="fw-bold">Live Countdown Timers</h6>
+                    <p class="small text-muted mb-0">My Tickets shows a real-time countdown to departure for every upcoming booking — so passengers never miss their bus.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-3 h-100 p-3">
+                    <i class="bi bi-printer fs-2 text-primary-cuu mb-2"></i>
+                    <h6 class="fw-bold">Print-Ready Tickets</h6>
+                    <p class="small text-muted mb-0">Passengers can print individual tickets or all bookings in a clean, print-optimised layout that hides navigation and shows QR codes.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- How It Works — Passenger Journey -->
+    <div class="mb-5 p-4 rounded-3" style="background:#f0f4f8">
+        <h3 class="fw-bold text-primary-cuu mb-4 text-center">How It Works — Your Journey in 5 Steps</h3>
+        <div class="row g-0 justify-content-center">
+            {% for step in journey_steps %}
+            <div class="col-12 col-md d-flex flex-column align-items-center text-center px-3 mb-3 mb-md-0">
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold fs-5 text-white mb-3"
+                     style="width:52px;height:52px;background:var(--primary);flex-shrink:0">{{ forloop.counter }}</div>
+                <i class="{{ step.icon }} fs-2 text-primary-cuu mb-2"></i>
+                <h6 class="fw-bold mb-1">{{ step.title }}</h6>
+                <p class="small text-muted mb-0">{{ step.desc }}</p>
+            </div>
+            {% empty %}
+            <div class="col-12 col-md d-flex flex-column align-items-center text-center px-3 mb-3 mb-md-0">
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold fs-5 text-white mb-3"
+                     style="width:52px;height:52px;background:var(--primary)">1</div>
+                <i class="bi bi-search fs-2 text-primary-cuu mb-2"></i>
+                <h6 class="fw-bold mb-1">Search</h6>
+                <p class="small text-muted mb-0">Enter your departure city, destination, and travel date to find available buses.</p>
+            </div>
+            <div class="col-12 col-md d-flex flex-column align-items-center text-center px-3 mb-3 mb-md-0">
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold fs-5 text-white mb-3"
+                     style="width:52px;height:52px;background:var(--primary)">2</div>
+                <i class="bi bi-bus-front fs-2 text-primary-cuu mb-2"></i>
+                <h6 class="fw-bold mb-1">Choose a Bus</h6>
+                <p class="small text-muted mb-0">Compare fares, operators, amenities, occupancy, and departure times at a glance.</p>
+            </div>
+            <div class="col-12 col-md d-flex flex-column align-items-center text-center px-3 mb-3 mb-md-0">
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold fs-5 text-white mb-3"
+                     style="width:52px;height:52px;background:var(--primary)">3</div>
+                <i class="bi bi-grid-3x3-gap fs-2 text-primary-cuu mb-2"></i>
+                <h6 class="fw-bold mb-1">Pick Your Seat</h6>
+                <p class="small text-muted mb-0">Select your preferred seat from an interactive grid showing real-time availability.</p>
+            </div>
+            <div class="col-12 col-md d-flex flex-column align-items-center text-center px-3 mb-3 mb-md-0">
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold fs-5 text-white mb-3"
+                     style="width:52px;height:52px;background:var(--primary)">4</div>
+                <i class="bi bi-credit-card fs-2 text-primary-cuu mb-2"></i>
+                <h6 class="fw-bold mb-1">Pay Securely</h6>
+                <p class="small text-muted mb-0">Choose your payment method — Mobile Money, Visa, or Cash. Fares calculated server-side for integrity.</p>
+            </div>
+            <div class="col-12 col-md d-flex flex-column align-items-center text-center px-3 mb-3 mb-md-0">
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold fs-5 text-white mb-3"
+                     style="width:52px;height:52px;background:var(--primary)">5</div>
+                <i class="bi bi-qr-code fs-2 text-primary-cuu mb-2"></i>
+                <h6 class="fw-bold mb-1">Get Your Ticket</h6>
+                <p class="small text-muted mb-0">Receive an email confirmation and a digital QR ticket. Print it or show it on your phone at boarding.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Developer Info -->
+    <div class="card border-0 rounded-3 text-white py-4 px-4" style="background:var(--primary)">
+        <div class="row align-items-center g-3">
+            <div class="col-md-2 text-center">
+                <div class="rounded-circle bg-white d-flex align-items-center justify-content-center mx-auto fw-bold fs-1 text-primary-cuu"
+                     style="width:80px;height:80px;color:var(--primary)">U</div>
+            </div>
+            <div class="col-md-7">
+                <h4 class="fw-bold mb-2">Developer Information</h4>
+                <div class="row g-1 small opacity-90">
+                    <div class="col-sm-6"><i class="bi bi-person me-2"></i><strong>Name:</strong> Umar Mustapha Umar</div>
+                    <div class="col-sm-6"><i class="bi bi-card-text me-2"></i><strong>Student ID:</strong> 130-782</div>
+                    <div class="col-sm-6"><i class="bi bi-building me-2"></i><strong>University:</strong> Cavendish University Uganda</div>
+                    <div class="col-sm-6"><i class="bi bi-mortarboard me-2"></i><strong>Programme:</strong> Bachelor of Information Technology</div>
+                    <div class="col-sm-6"><i class="bi bi-calendar me-2"></i><strong>Year:</strong> Final Year, 2026</div>
+                    <div class="col-sm-6"><i class="bi bi-book me-2"></i><strong>Project:</strong> Final Year Project (FYP)</div>
+                </div>
+            </div>
+            <div class="col-md-3 text-md-end text-center mt-3 mt-md-0">
+                <img src="{% static 'images/cuu-logo.jpg' %}" alt="CUU" class="rounded-2" style="height:70px">
+                <div class="small opacity-75 mt-1">Cavendish University Uganda</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,392 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+{% if request.session.payment_success %}
+<div class="container-fluid px-3 pt-2">
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i><strong>Booking Confirmed!</strong> Your ticket has been booked successfully. Check <a href="{% url 'show_my_ticket' %}" class="alert-link">My Tickets</a>.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</div>
+{% endif %}
+
+<!-- Carousel -->
+<div id="bannerCarousel" class="carousel slide" data-bs-ride="carousel">
+    <div class="carousel-inner" id="carouselItems">
+        <div class="carousel-item active">
+            <img src="{% static 'images/bus-city.webp' %}" class="d-block w-100" alt="CUU RouteLink" style="height:420px;object-fit:cover;">
+        </div>
+    </div>
+    <button class="carousel-control-prev" type="button" data-bs-target="#bannerCarousel" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon"></span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#bannerCarousel" data-bs-slide="next">
+        <span class="carousel-control-next-icon"></span>
+    </button>
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10;text-align:center;color:white;background:rgba(26,60,94,0.72);padding:1.5rem 2.5rem;border-radius:14px;min-width:320px;">
+        <h1 class="fw-bold mb-1" style="font-size:1.9rem">CUU RouteLink</h1>
+        <p class="mb-0 opacity-85">Your Smart Transit Companion — Book Bus Tickets Across Uganda</p>
+    </div>
+</div>
+
+<!-- Search Form -->
+<div class="container mt-n3 position-relative" style="z-index:10">
+    <div class="search-card">
+        <h5 class="fw-bold mb-3 text-primary-cuu"><i class="bi bi-search me-2"></i>Find Your Bus</h5>
+        <form id="journeyForm" onsubmit="searchBuses(); return false;">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold small">From</label>
+                    <select id="from" name="from" class="form-select" required>
+                        <option value="" disabled selected>Choose departure</option>
+                    </select>
+                </div>
+                <div class="col-auto d-flex align-items-end pb-1">
+                    <button type="button" class="btn btn-outline-secondary" onclick="swapFromTo()" title="Swap From / To">
+                        ⇄
+                    </button>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold small">To</label>
+                    <select id="to" name="to" class="form-select" required>
+                        <option value="" disabled selected>Choose destination</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold small">Journey Date</label>
+                    <input type="date" id="journey_date" class="form-control">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-search w-100" id="searchBtn">
+                        <span class="search-spinner spinner-border spinner-border-sm me-1" id="searchSpinner"></span>
+                        <i class="bi bi-search me-1" id="searchIcon"></i>Search
+                    </button>
+                </div>
+            </div>
+            <!-- Filters (collapsed) -->
+            <div class="mt-2">
+                <a class="small text-primary-cuu" data-bs-toggle="collapse" href="#filterPanel">
+                    <i class="bi bi-funnel me-1"></i>More Filters
+                </a>
+            </div>
+            <div class="collapse mt-2" id="filterPanel">
+                <div class="row g-2">
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small fw-semibold">Bus Type</label>
+                        <select id="bus_type" class="form-select form-select-sm">
+                            <option value="">All Types</option>
+                            <option value="AC">AC</option>
+                            <option value="Non-AC">Non-AC</option>
+                            <option value="Sleeper">Sleeper</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small fw-semibold">Departure</label>
+                        <select id="departure_period" class="form-select form-select-sm">
+                            <option value="">Any Time</option>
+                            <option value="morning">Morning (5am–12pm)</option>
+                            <option value="afternoon">Afternoon (12pm–5pm)</option>
+                            <option value="evening">Evening (5pm–9pm)</option>
+                            <option value="night">Night (9pm–5am)</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small fw-semibold">Min Fare (UGX)</label>
+                        <input type="number" id="min_fare" class="form-control form-control-sm" placeholder="0">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small fw-semibold">Sort By</label>
+                        <select id="sort_by" class="form-select form-select-sm">
+                            <option value="departure">Departure Time</option>
+                            <option value="fare_asc">Fare: Low to High</option>
+                            <option value="fare_desc">Fare: High to Low</option>
+                            <option value="seats">Most Seats</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Bus Listing -->
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold text-primary-cuu mb-0"><i class="bi bi-bus-front me-2"></i>Available Buses</h4>
+        <span id="busCount" class="badge bg-secondary"></span>
+    </div>
+    <div id="busList"></div>
+    <div id="noBusMessage" class="text-center py-5" style="display:none">
+        <i class="bi bi-bus-front text-muted" style="font-size:3rem"></i>
+        <p class="mt-2 text-muted">No buses found for your search.</p>
+    </div>
+    <div id="loadingBuses" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 text-muted small">Loading buses...</p>
+    </div>
+</div>
+
+<!-- Stats Section -->
+<div class="py-5" style="background:var(--primary)">
+    <div class="container">
+        <h4 class="text-center fw-bold text-white mb-4">CUU RouteLink by the Numbers</h4>
+        <div class="row g-4 text-center">
+            <div class="col-6 col-md-3">
+                <div class="stat-counter-card">
+                    <div class="stat-counter-value" id="stat-routes">—</div>
+                    <div class="stat-counter-label"><i class="bi bi-signpost me-1"></i>Routes Served</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-counter-card">
+                    <div class="stat-counter-value" id="stat-buses">—</div>
+                    <div class="stat-counter-label"><i class="bi bi-bus-front me-1"></i>Buses Available</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-counter-card">
+                    <div class="stat-counter-value" id="stat-bookings">—</div>
+                    <div class="stat-counter-label"><i class="bi bi-ticket me-1"></i>Bookings Made</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-counter-card">
+                    <div class="stat-counter-value" id="stat-passengers">—</div>
+                    <div class="stat-counter-label"><i class="bi bi-people me-1"></i>Passengers Served</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="bg-white py-5 border-top">
+    <div class="container">
+        <h4 class="text-center fw-bold text-primary-cuu mb-4">Why Choose CUU RouteLink?</h4>
+        <div class="row g-4 text-center">
+            <div class="col-6 col-md-3">
+                <div class="p-3"><i class="bi bi-shield-check text-success fs-1"></i>
+                <h6 class="fw-bold mt-2">Secure Booking</h6>
+                <p class="small text-muted">Industry-standard password hashing and secure sessions.</p></div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="p-3"><i class="bi bi-qr-code fs-1" style="color:var(--primary)"></i>
+                <h6 class="fw-bold mt-2">QR Tickets</h6>
+                <p class="small text-muted">Digital tickets with QR codes for easy check-in.</p></div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="p-3"><i class="bi bi-geo-alt-fill text-danger fs-1"></i>
+                <h6 class="fw-bold mt-2">Route Maps</h6>
+                <p class="small text-muted">Interactive maps showing your journey across Uganda.</p></div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="p-3"><i class="bi bi-star-fill text-warning fs-1"></i>
+                <h6 class="fw-bold mt-2">Ratings & Reviews</h6>
+                <p class="small text-muted">Rate your trip and help other passengers.</p></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    fetchBanners();
+    fetchPlaces();
+    fetchBuses();
+    fetchStats();
+});
+
+function fetchBanners() {
+    fetch('{% url "banner_carousel_api" %}')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.length) return;
+            const inner = document.getElementById('carouselItems');
+            inner.innerHTML = '';
+            data.forEach((item, i) => {
+                const div = document.createElement('div');
+                div.className = 'carousel-item' + (i === 0 ? ' active' : '');
+                div.innerHTML = `<img src="${item.banner_image}" class="d-block w-100" alt="${item.banner_title}" style="height:420px;object-fit:cover;"><div class="carousel-caption"><h5>${item.banner_title}</h5></div>`;
+                inner.appendChild(div);
+            });
+        })
+        .catch(() => {});
+}
+
+function fetchPlaces() {
+    fetch('{% url "place_list_api" %}')
+        .then(r => r.json())
+        .then(data => {
+            const from = document.getElementById('from');
+            const to = document.getElementById('to');
+            data.forEach(p => {
+                from.add(new Option(p.place_name, p.place_id));
+                to.add(new Option(p.place_name, p.place_id));
+            });
+        })
+        .catch(() => {});
+}
+
+function buildQueryUrl() {
+    const params = new URLSearchParams();
+    const from = document.getElementById('from').value;
+    const to = document.getElementById('to').value;
+    const date = document.getElementById('journey_date').value;
+    const busType = document.getElementById('bus_type').value;
+    const period = document.getElementById('departure_period').value;
+    const minFare = document.getElementById('min_fare').value;
+    const sortBy = document.getElementById('sort_by').value;
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    if (date) params.set('journey_date', date);
+    if (busType) params.set('bus_type', busType);
+    if (period) params.set('departure_period', period);
+    if (minFare) params.set('min_fare', minFare);
+    if (sortBy) params.set('sort_by', sortBy);
+    return '{% url "bus_list_api" %}?' + params.toString();
+}
+
+function fetchBuses(url) {
+    document.getElementById('loadingBuses').style.display = 'block';
+    document.getElementById('busList').innerHTML = '';
+    document.getElementById('noBusMessage').style.display = 'none';
+    document.getElementById('searchBtn').disabled = true;
+    document.getElementById('searchSpinner').classList.add('active');
+    document.getElementById('searchIcon').style.display = 'none';
+
+    fetch(url || '{% url "bus_list_api" %}')
+        .then(r => r.json())
+        .then(data => renderBuses(data))
+        .catch(() => renderBuses(null))
+        .finally(() => {
+            document.getElementById('loadingBuses').style.display = 'none';
+            document.getElementById('searchBtn').disabled = false;
+            document.getElementById('searchSpinner').classList.remove('active');
+            document.getElementById('searchIcon').style.display = '';
+        });
+}
+
+function searchBuses() {
+    fetchBuses(buildQueryUrl());
+}
+
+function swapFromTo() {
+    const fromSel = document.getElementById('from');
+    const toSel = document.getElementById('to');
+    const tmp = fromSel.value;
+    fromSel.value = toSel.value;
+    toSel.value = tmp;
+}
+
+function fetchStats() {
+    fetch('{% url "stats_api" %}')
+        .then(r => r.json())
+        .then(data => {
+            animateCounter('stat-routes', data.total_routes);
+            animateCounter('stat-buses', data.total_buses);
+            animateCounter('stat-bookings', data.total_bookings);
+            animateCounter('stat-passengers', data.total_passengers);
+        })
+        .catch(() => {});
+}
+
+function animateCounter(id, target) {
+    const el = document.getElementById(id);
+    if (!el || !target) { if (el) el.textContent = target || '0'; return; }
+    const duration = 1500;
+    const start = performance.now();
+    function step(now) {
+        const progress = Math.min((now - start) / duration, 1);
+        el.textContent = Math.floor(progress * target).toLocaleString();
+        if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+}
+
+function formatDuration(minutes) {
+    if (!minutes) return '';
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+function renderBuses(data) {
+    const list = document.getElementById('busList');
+    const noMsg = document.getElementById('noBusMessage');
+    const countBadge = document.getElementById('busCount');
+    list.innerHTML = '';
+
+    if (!data || data.message) {
+        noMsg.style.display = 'block';
+        countBadge.textContent = '0 buses';
+        return;
+    }
+
+    countBadge.textContent = data.length + ' bus' + (data.length !== 1 ? 'es' : '') + ' found';
+
+    data.forEach(bus => {
+        const avail = bus.available_seats;
+        const seatClass = avail === 0 ? 'full' : avail <= 5 ? 'limited' : 'available';
+        const seatText = avail === 0 ? 'Full' : avail + ' seats left';
+        const statusBadge = bus.status !== 'Scheduled'
+            ? `<span class="badge bg-warning text-dark ms-1">${bus.status}</span>` : '';
+
+        const occupancyPct = bus.seats > 0 ? Math.round((bus.seats - avail) / bus.seats * 100) : 0;
+        const progressColor = occupancyPct >= 90 ? '#E74C3C' : occupancyPct >= 60 ? '#F4A124' : '#2ECC71';
+
+        const amenityHtml = (bus.amenities || []).length
+            ? `<div class="d-flex flex-wrap gap-1 mt-1">${bus.amenities.map(a =>
+                `<span class="amenity-badge">${a}</span>`).join('')}</div>` : '';
+
+        const durationHtml = bus.duration_display
+            ? `<span><i class="bi bi-hourglass-split me-1"></i>${bus.duration_display}</span>` : '';
+
+        const card = document.createElement('div');
+        card.className = 'bus-card';
+        card.innerHTML = `
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div class="flex-grow-1">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="bus-name">${bus.bus_name}</span>
+                        <span class="bus-type-badge">${bus.bus_type}</span>
+                        ${statusBadge}
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="fw-semibold">${bus.source}</span>
+                        <span class="route-arrow"><i class="bi bi-arrow-right"></i></span>
+                        <span class="fw-semibold">${bus.destination}</span>
+                    </div>
+                    <div class="d-flex gap-3 text-muted small flex-wrap">
+                        <span><i class="bi bi-clock me-1"></i>${bus.starting_time}</span>
+                        ${durationHtml}
+                        <span><i class="bi bi-person me-1"></i>${bus.bus_operator}</span>
+                    </div>
+                    ${amenityHtml}
+                    <div class="mt-2">
+                        <div class="d-flex justify-content-between" style="font-size:0.75rem;color:#888;margin-bottom:3px">
+                            <span>${bus.seats - avail} / ${bus.seats} seats booked</span>
+                            <span>${occupancyPct}%</span>
+                        </div>
+                        <div style="height:6px;background:#e9ecef;border-radius:3px;overflow:hidden">
+                            <div style="height:100%;width:${occupancyPct}%;background:${progressColor};border-radius:3px;transition:width 0.6s"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-md-end d-flex flex-row flex-md-column align-items-center align-items-md-end gap-2 gap-md-1">
+                    <div class="fare">UGX ${bus.fare.toLocaleString()}</div>
+                    <span class="seats-badge ${seatClass}">${seatText}</span>
+                    <a href="/buses/${bus.bus_id}/" class="btn-select-seat mt-md-2">Select Seats</a>
+                </div>
+            </div>`;
+        list.appendChild(card);
+    });
+}
+</script>
+{% endblock %}

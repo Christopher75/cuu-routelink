@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-4 px-4">
+    <div class="mb-4">
+        <h3 class="fw-bold text-primary-cuu mb-1">
+            <i class="bi bi-bar-chart-fill me-2"></i>Admin Analytics Dashboard
+        </h3>
+        <p class="text-muted small mb-0">CUU RouteLink — Cavendish University Uganda | Real-time booking analytics</p>
+    </div>
+
+    <!-- KPI Cards Row 1 -->
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-label">Bookings This Month</div>
+                <div class="stat-value">{{ total_bookings_month }}</div>
+                <div class="small text-muted"><i class="bi bi-calendar3"></i> Current month</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card accent-amber">
+                <div class="stat-label">Revenue This Month</div>
+                <div class="stat-value" style="font-size:1.4rem">UGX {{ revenue_month|floatformat:0 }}</div>
+                <div class="small text-muted"><i class="bi bi-cash"></i> Completed payments</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card accent-green">
+                <div class="stat-label">Total Bookings</div>
+                <div class="stat-value">{{ total_bookings_all }}</div>
+                <div class="small text-muted"><i class="bi bi-ticket"></i> All time</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card accent-red">
+                <div class="stat-label">Cancellation Rate</div>
+                <div class="stat-value">{{ cancellation_rate }}%</div>
+                <div class="small text-muted"><i class="bi bi-x-circle"></i> Of all bookings</div>
+            </div>
+        </div>
+    </div>
+    <!-- KPI Cards Row 2 -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card" style="border-left-color:#8e44ad">
+                <div class="stat-label">Registered Users</div>
+                <div class="stat-value" style="color:#8e44ad">{{ total_users }}</div>
+                <div class="small text-muted"><i class="bi bi-people"></i> Non-admin accounts</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card accent-amber">
+                <div class="stat-label">Average Rating</div>
+                <div class="stat-value">
+                    {% if avg_rating %}★ {{ avg_rating }}{% else %}—{% endif %}
+                </div>
+                <div class="small text-muted"><i class="bi bi-star"></i> Out of 5</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card accent-green">
+                <div class="stat-label">Total Revenue</div>
+                <div class="stat-value" style="font-size:1.3rem">UGX {{ total_revenue_all|floatformat:0 }}</div>
+                <div class="small text-muted"><i class="bi bi-graph-up"></i> All time</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card">
+                <div class="stat-label">Active Buses</div>
+                <div class="stat-value">{{ occupancy_data|length }}</div>
+                <div class="small text-muted"><i class="bi bi-bus-front"></i> In system</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- Monthly Revenue Chart -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-3 h-100">
+                <div class="card-header fw-bold py-3 small" style="background:#f0f4f8">
+                    <i class="bi bi-graph-up me-2 text-primary-cuu"></i>Revenue — Last 6 Months
+                </div>
+                <div class="card-body">
+                    <canvas id="revenueChart" height="220"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Popular Routes -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-3 h-100">
+                <div class="card-header fw-bold py-3 small" style="background:#f0f4f8">
+                    <i class="bi bi-signpost me-2 text-primary-cuu"></i>Top Routes
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for route in popular_routes %}
+                        <div class="list-group-item px-3 py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="small fw-semibold">
+                                    {{ route.bus__source__place_name }} → {{ route.bus__destination__place_name }}
+                                </span>
+                                <span class="badge bg-primary rounded-pill">{{ route.count }}</span>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="list-group-item text-muted small p-3">No data yet</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bus Occupancy -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header fw-bold py-3 small" style="background:#f0f4f8">
+            <i class="bi bi-bus-front me-2 text-primary-cuu"></i>Bus Occupancy Rates
+        </div>
+        <div class="card-body">
+            <canvas id="occupancyChart" height="100"></canvas>
+        </div>
+    </div>
+
+    <!-- Recent Reviews -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header fw-bold py-3 small" style="background:#f0f4f8">
+            <i class="bi bi-star me-2 text-warning"></i>Recent Reviews
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover small mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>User</th>
+                        <th>Bus</th>
+                        <th>Rating</th>
+                        <th>Review</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in recent_ratings %}
+                    <tr>
+                        <td>{{ r.user.email }}</td>
+                        <td>{{ r.bus.bus_name }}</td>
+                        <td>
+                            <span class="text-warning">
+                                {% for i in "12345" %}{% if forloop.counter <= r.rating_value %}★{% else %}☆{% endif %}{% endfor %}
+                            </span>
+                            <span class="text-muted small ms-1">{{ r.rating_value }}/5</span>
+                        </td>
+                        <td class="text-muted">{{ r.review|truncatechars:50|default:"—" }}</td>
+                        <td>{{ r.created_at|date:"d M Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center text-muted py-3">No reviews yet</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Bookings -->
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header fw-bold py-3 small d-flex justify-content-between" style="background:#f0f4f8">
+            <span><i class="bi bi-clock-history me-2 text-primary-cuu"></i>Recent Bookings</span>
+            <a href="{% url 'admin:Bus_booking_changelist' %}" class="btn btn-sm btn-outline-primary">View All</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover small mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Booking ID</th>
+                        <th>User</th>
+                        <th>Route</th>
+                        <th>Seats</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for booking in recent_bookings %}
+                    <tr>
+                        <td><code class="small">{{ booking.booking_id|truncatechars:12 }}</code></td>
+                        <td>{{ booking.user.email }}</td>
+                        <td>{{ booking.bus.source.place_name }} → {{ booking.bus.destination.place_name }}</td>
+                        <td>{{ booking.seats }}</td>
+                        <td>{{ booking.created_at|date:"d M Y H:i" }}</td>
+                        <td>
+                            {% if booking.is_cancelled %}
+                            <span class="badge bg-danger">Cancelled</span>
+                            {% else %}
+                            <span class="badge bg-success">Active</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center text-muted py-3">No bookings yet</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const monthlyData = {{ monthly_data|safe }};
+const occupancyData = {{ occupancy_data|safe }};
+
+// Revenue Chart
+new Chart(document.getElementById('revenueChart'), {
+    type: 'bar',
+    data: {
+        labels: monthlyData.map(d => d.month),
+        datasets: [{
+            label: 'Revenue (UGX)',
+            data: monthlyData.map(d => d.revenue),
+            backgroundColor: 'rgba(26,60,94,0.75)',
+            borderColor: '#1A3C5E',
+            borderWidth: 1,
+            borderRadius: 6,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, ticks: { callback: v => 'UGX ' + v.toLocaleString() } }
+        }
+    }
+});
+
+// Occupancy Chart
+new Chart(document.getElementById('occupancyChart'), {
+    type: 'bar',
+    data: {
+        labels: occupancyData.map(d => d.name + '\n' + d.route),
+        datasets: [
+            {
+                label: 'Booked',
+                data: occupancyData.map(d => d.booked),
+                backgroundColor: 'rgba(231,76,60,0.75)',
+                borderRadius: 4,
+            },
+            {
+                label: 'Available',
+                data: occupancyData.map(d => d.total - d.booked),
+                backgroundColor: 'rgba(46,204,113,0.65)',
+                borderRadius: 4,
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            x: { stacked: true },
+            y: { stacked: true, beginAtZero: true }
+        },
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    afterLabel: (ctx) => {
+                        const d = occupancyData[ctx.dataIndex];
+                        return 'Occupancy: ' + d.rate + '%';
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

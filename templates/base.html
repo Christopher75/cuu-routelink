@@ -1,0 +1,134 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CUU RouteLink{% endblock %} — Smart Transit Booking</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{% static 'css/main.css' %}" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg cuu-navbar">
+    <div class="container-fluid px-3 px-lg-4">
+        <a class="navbar-brand" href="{% url 'home' %}">
+            <img src="{% static 'images/cuu-logo.jpg' %}" alt="CUU Logo">
+            CUU <span>RouteLink</span>
+        </a>
+        <button class="navbar-toggler border-0 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+            <i class="bi bi-list fs-4"></i>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'home' %}">
+                        <i class="bi bi-house me-1"></i>Home
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'about_us' %}">About</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'contact_us' %}">Contact</a>
+                </li>
+                {% if request.user.is_authenticated %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'show_my_ticket' %}">
+                        <i class="bi bi-ticket-perforated me-1"></i>My Tickets
+                    </a>
+                </li>
+                {% if request.user.is_staff %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'admin_dashboard' %}">
+                        <i class="bi bi-bar-chart me-1"></i>Dashboard
+                    </a>
+                </li>
+                {% endif %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" data-bs-toggle="dropdown">
+                        {% if request.user.profile_picture %}
+                            <img src="{{ request.user.profile_picture.url }}" class="rounded-circle" width="28" height="28" style="object-fit:cover">
+                        {% else %}
+                            <span class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white fw-bold"
+                                  style="width:28px;height:28px;font-size:0.75rem">
+                                {{ request.user.first_name|first|upper|default:request.user.email|first|upper }}
+                            </span>
+                        {% endif %}
+                        {{ request.user.first_name|default:request.user.email }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{% url 'profile' %}"><i class="bi bi-person me-2"></i>Profile</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                    </ul>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'login' %}">Login</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link btn-nav-cta ms-2" href="{% url 'register' %}">Register</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
+{% if messages %}
+<div class="container-fluid px-3 pt-2">
+    {% for message in messages %}
+    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show mb-1 rounded-3" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<main class="content-wrap">
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="cuu-footer">
+    <div class="container py-3">
+        <div class="row gy-3">
+            <div class="col-md-4">
+                <h6>CUU RouteLink</h6>
+                <p class="small" style="color:rgba(255,255,255,0.65)">Your Smart Transit Companion.<br>Connecting Uganda, one route at a time.</p>
+            </div>
+            <div class="col-md-4">
+                <h6>Quick Links</h6>
+                <ul class="list-unstyled mb-0">
+                    <li><a href="{% url 'home' %}">Home</a></li>
+                    <li><a href="{% url 'about_us' %}">About Us</a></li>
+                    <li><a href="{% url 'contact_us' %}">Contact</a></li>
+                    {% if request.user.is_authenticated %}
+                    <li><a href="{% url 'show_my_ticket' %}">My Tickets</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+            <div class="col-md-4">
+                <h6>Developer Info</h6>
+                <p class="small mb-0" style="color:rgba(255,255,255,0.65)">
+                    Umar Mustapha Umar<br>
+                    Student ID: 130-782<br>
+                    Cavendish University Uganda<br>
+                    Final Year Project, 2026
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="cuu-footer-bottom">
+        &copy; 2026 CUU RouteLink &nbsp;|&nbsp; Developed by Umar Mustapha Umar (ID: 130-782) &nbsp;|&nbsp; Cavendish University Uganda
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>
