@@ -6,7 +6,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from datetime import timedelta
-from Bus.models import Place, BusOperator, Bus
+from Bus.models import Place, BusOperator, Bus, Banner
 
 User = get_user_model()
 
@@ -76,5 +76,15 @@ class Command(BaseCommand):
             Bus.objects.get_or_create(bus_name=b['bus_name'], source=b['source'], defaults=b)
 
         self.stdout.write(self.style.SUCCESS(f'Seeded {len(buses)} buses.'))
+
+        # Seed banner carousel images
+        banners = [
+            ('Explore Uganda by Bus', 'banner_images/2.jpg'),
+            ('Book Smart, Travel Easy', 'banner_images/3.jpg'),
+            ('CUU RouteLink — Your Transit Partner', 'banner_images/two.jpg'),
+        ]
+        for title, image in banners:
+            Banner.objects.get_or_create(banner_title=title, defaults={'banner_image': image})
+        self.stdout.write(self.style.SUCCESS('Seeded banner images.'))
         self.stdout.write(self.style.SUCCESS('Done! Visit http://127.0.0.1:8000/ to see the result.'))
         self.stdout.write(self.style.WARNING('Admin: admin@cuuroute.ug / Admin@1234'))

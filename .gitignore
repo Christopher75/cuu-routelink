@@ -14,9 +14,10 @@ build/
 *.log
 local_settings.py
 db.sqlite3
-media/
-uploads/
 staticfiles/
+
+# Keep uploads tracked so banner images deploy to Render
+# uploads/   <-- intentionally NOT excluded
 
 # Environment / secrets
 .env
